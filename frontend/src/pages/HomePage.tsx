@@ -24,14 +24,21 @@ const SPACE_OPTIONS = [
   "Persönlicher Space"
 ];
 
+type ViewMode = "pages" | "recent" | "starred" | "people" | "apps";
+
 export function HomePage({ token }: { token: string }) {
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
   const [search, setSearch] = useState("");
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
   const [space, setSpace] = useState(SPACE_OPTIONS[0]);
+  const [viewMode, setViewMode] = useState<ViewMode>("pages");
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newContent, setNewContent] = useState("");
+  const [newParentId, setNewParentId] = useState<string>("");
+  const [actionInfo, setActionInfo] = useState("");
 
   const load = async () => {
     const [p, d] = await Promise.all([
@@ -47,6 +54,17 @@ export function HomePage({ token }: { token: string }) {
     load().catch(console.error);
   }, []);
 
+  function openCreateModal() {
+    setShowCreateModal(true);
+    setNewTitle("");
+    setNewContent("");
+    setNewParentId(selectedPageId ?? "");
+  }
+
+  function closeCreateModal() {
+    setShowCreateModal(false);
+  }
+
   async function createPage(e: FormEvent) {
     e.preventDefault();
     await apiFetch(
@@ -54,16 +72,16 @@ export function HomePage({ token }: { token: string }) {
       {
         method: "POST",
         body: JSON.stringify({
-          title,
-          content,
+          title: newTitle,
+          content: newContent || "Neue Seite",
           tagNames: ["knowledge", "team"],
-          parentId: selectedPageId ?? undefined
+          parentId: newParentId || undefined
         })
       },
       token
     );
-    setTitle("");
-    setContent("");
+    closeCreateModal();
+    setActionInfo(`Seite "${newTitle}" erstellt.`);
     await load();
   }
 
@@ -81,15 +99,19 @@ export function HomePage({ token }: { token: string }) {
   const rootPages = useMemo(() => filteredPages.filter((page) => !page.parentId), [filteredPages]);
   const childPages = (parentId: string) => filteredPages.filter((page) => page.parentId === parentId);
 
+  const starredPages = useMemo(() => pages.slice(0, 3), [pages]);
+  const peopleDemo = ["Admin", "Editor", "Viewer"];
+  const appsDemo = ["Jira Issues", "Task Report", "Page Tree Macro"];
+
   return (
     <div className="hwiki-shell">
       <header className="hwiki-topnav">
         <div className="hwiki-topnav-left">
           <div className="brand-pill">❄️ Hokkaido Wiki</div>
-          <button className="ghost">Recent</button>
-          <button className="ghost">Starred</button>
-          <button className="ghost">People</button>
-          <button className="ghost">Apps</button>
+          <button className={viewMode === "recent" ? "ghost active" : "ghost"} onClick={() => setViewMode("recent")}>Recent</button>
+          <button className={viewMode === "starred" ? "ghost active" : "ghost"} onClick={() => setViewMode("starred")}>Starred</button>
+          <button className={viewMode === "people" ? "ghost active" : "ghost"} onClick={() => setViewMode("people")}>People</button>
+          <button className={viewMode === "apps" ? "ghost active" : "ghost"} onClick={() => setViewMode("apps")}>Apps</button>
         </div>
 
         <div className="hwiki-topnav-center">
@@ -104,13 +126,16 @@ export function HomePage({ token }: { token: string }) {
             className="global-search"
             placeholder="Globale Suche (Seiten, Blogs, Anhänge...)"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setViewMode("pages");
+            }}
           />
         </div>
 
         <div className="hwiki-topnav-right">
-          <button>Create</button>
-          <button className="ghost">Admin</button>
+          <button onClick={openCreateModal}>Create Seite</button>
+          <button className="ghost" onClick={() => setActionInfo("Admin Bereich: Demo-Ansicht")}>Admin</button>
           <div className="avatar">HK</div>
         </div>
       </header>
@@ -118,11 +143,10 @@ export function HomePage({ token }: { token: string }) {
       <aside className="hwiki-sidebar">
         <h3>{space}</h3>
         <nav className="space-links">
-          <button className="ghost">Space Overview</button>
-          <button className="ghost">Blog Posts</button>
-          <button className="ghost">Shortcuts</button>
-          <button className="ghost">Space Tools</button>
-          <button className="ghost">Space Settings</button>
+          <button className="ghost" onClick={() => setViewMode("pages")}>Space Overview</button>
+          <button className="ghost" onClick={() => setViewMode("recent")}>Blog Posts</button>
+          <button className="ghost" onClick={() => setViewMode("apps")}>Space Tools</button>
+          <button className="ghost" onClick={() => setViewMode("people")}>Space Settings</button>
         </nav>
 
         <h4>Page Tree</h4>
@@ -131,7 +155,10 @@ export function HomePage({ token }: { token: string }) {
             <li key={root.id}>
               <button
                 className={selectedPage?.id === root.id ? "tree-btn active" : "tree-btn"}
-                onClick={() => setSelectedPageId(root.id)}
+                onClick={() => {
+                  setSelectedPageId(root.id);
+                  setViewMode("pages");
+                }}
               >
                 {root.title}
               </button>
@@ -141,7 +168,10 @@ export function HomePage({ token }: { token: string }) {
                     <li key={child.id}>
                       <button
                         className={selectedPage?.id === child.id ? "tree-btn active" : "tree-btn"}
-                        onClick={() => setSelectedPageId(child.id)}
+                        onClick={() => {
+                          setSelectedPageId(child.id);
+                          setViewMode("pages");
+                        }}
                       >
                         {child.title}
                       </button>
@@ -155,35 +185,85 @@ export function HomePage({ token }: { token: string }) {
       </aside>
 
       <main className="hwiki-main">
-        <section className="page-header card">
-          <div>
-            <small className="muted">{space} / Home / {selectedPage?.title ?? "No page selected"}</small>
-            <h2>{selectedPage?.title ?? "Willkommen"}</h2>
-          </div>
-          <div className="page-actions">
-            <button>Edit</button>
-            <button className="ghost">Share</button>
-            <button className="ghost">…</button>
-          </div>
-        </section>
+        {actionInfo && <div className="inline-info">{actionInfo}</div>}
+        {viewMode === "pages" && (
+          <>
+            <section className="page-header card">
+              <div>
+                <small className="muted">{space} / Home / {selectedPage?.title ?? "No page selected"}</small>
+                <h2>{selectedPage?.title ?? "Willkommen"}</h2>
+              </div>
+              <div className="page-actions">
+                <button className="ghost" onClick={() => setActionInfo("Editor wird als nächstes angebunden.")}>Edit</button>
+                <button className="ghost" onClick={() => setActionInfo("Share-Link kopieren: Feature-Demo aktiv.")}>Share</button>
+                <button className="ghost" onClick={() => setActionInfo("Weitere Aktionen: Move / Copy / History folgen.")}>…</button>
+              </div>
+            </section>
 
-        <section className="card content-view">
-          {selectedPage ? (
-            <>
-              <small className="muted">Updated: {new Date(selectedPage.updatedAt).toLocaleString()}</small>
-              <pre>{selectedPage.content}</pre>
-            </>
-          ) : (
-            <p>Wähle eine Seite aus dem Baum oder erstelle eine neue Seite.</p>
-          )}
+            <section className="card content-view">
+              {selectedPage ? (
+                <>
+                  <small className="muted">Updated: {new Date(selectedPage.updatedAt).toLocaleString()}</small>
+                  <pre>{selectedPage.content}</pre>
+                </>
+              ) : (
+                <p>Wähle eine Seite aus dem Baum oder erstelle eine neue Seite.</p>
+              )}
 
-          <div className="page-meta">
-            <span>Labels: knowledge, team</span>
-            <span>Likes: 12</span>
-            <span>Watching: on</span>
-            <span>Version: 1</span>
-          </div>
-        </section>
+              <div className="page-meta">
+                <span>Labels: knowledge, team</span>
+                <span>Likes: 12</span>
+                <span>Watching: on</span>
+                <span>Version: 1</span>
+              </div>
+            </section>
+          </>
+        )}
+
+        {viewMode === "recent" && (
+          <section className="card">
+            <h3>Recent Pages</h3>
+            <ul>
+              {(dashboard?.recentPages ?? []).map((p) => (
+                <li key={p.id}>{p.title}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {viewMode === "starred" && (
+          <section className="card">
+            <h3>Starred Pages</h3>
+            <ul>
+              {starredPages.map((p) => (
+                <li key={p.id}>{p.title}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {viewMode === "people" && (
+          <section className="card">
+            <h3>People Directory</h3>
+            <ul>
+              {peopleDemo.map((person) => (
+                <li key={person}>{person}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {viewMode === "apps" && (
+          <section className="card">
+            <h3>Apps & Integrationen</h3>
+            <button className="ghost" onClick={() => setActionInfo("Jira-Integration Demo geöffnet.")}>Jira Integration öffnen</button>
+            <ul>
+              {appsDemo.map((app) => (
+                <li key={app}>{app}</li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <section className="card grid-two">
           <article>
@@ -195,45 +275,48 @@ export function HomePage({ token }: { token: string }) {
           </article>
 
           <article>
-            <h3>Neue Seite erstellen</h3>
-            <form onSubmit={createPage} className="create-form">
-              <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Seitentitel" required />
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Inhalt (WYSIWYG/Markdown Platzhalter)"
-                required
-              />
-              <button type="submit">Create Page</button>
-            </form>
-          </article>
-        </section>
-
-        <section className="card grid-three">
-          <article>
-            <h4>Kommentare</h4>
-            <ul>
-              <li>Inline-Kommentar Thread #1</li>
-              <li>Seitenkommentar @team</li>
-            </ul>
-          </article>
-          <article>
-            <h4>Anhänge</h4>
-            <ul>
-              <li>architecture.pdf (v2)</li>
-              <li>roadmap.png (v1)</li>
-            </ul>
-          </article>
-          <article>
-            <h4>Makros & Tools</h4>
-            <ul>
-              <li>Table of Contents</li>
-              <li>Status Macro</li>
-              <li>Children Display</li>
-            </ul>
+            <h3>Schnellaktionen</h3>
+            <button onClick={openCreateModal}>Create Seite</button>
+            <p className="muted">Neue Seiten jetzt über den Create-Dialog oben rechts.</p>
           </article>
         </section>
       </main>
+
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={closeCreateModal}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3>Create Seite</h3>
+            <form onSubmit={createPage} className="create-form">
+              <input
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="Seitentitel"
+                required
+              />
+              <textarea
+                value={newContent}
+                onChange={(e) => setNewContent(e.target.value)}
+                placeholder="Seiteninhalt"
+                required
+              />
+              <select value={newParentId} onChange={(e) => setNewParentId(e.target.value)}>
+                <option value="">Kein Parent (Root-Seite)</option>
+                {pages.map((page) => (
+                  <option key={page.id} value={page.id}>
+                    Parent: {page.title}
+                  </option>
+                ))}
+              </select>
+              <div className="modal-actions">
+                <button type="button" className="ghost" onClick={closeCreateModal}>
+                  Abbrechen
+                </button>
+                <button type="submit">Seite erstellen</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
