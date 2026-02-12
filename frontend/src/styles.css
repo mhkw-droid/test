@@ -287,3 +287,44 @@ button.ghost.active {
   border-radius: 8px;
   padding: 10px 12px;
 }
+
+
+.modal-card.large {
+  width: min(980px, 100%);
+}
+
+.rich-editor-wrap {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.rich-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  background: #f7f8fa;
+}
+
+.rich-toolbar button {
+  padding: 6px 10px;
+}
+
+.rich-editor {
+  min-height: 320px;
+  padding: 12px;
+  outline: none;
+}
+
+.rendered-content table {
+  border-collapse: collapse;
+}
+
+.rendered-content td,
+.rendered-content th {
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+}

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../api/client";
 
 type Dashboard = {
@@ -25,6 +25,68 @@ const SPACE_OPTIONS = [
 ];
 
 type ViewMode = "pages" | "recent" | "starred" | "people" | "apps";
+
+type RichEditorProps = {
+  initialValue: string;
+  onChange: (value: string) => void;
+};
+
+function RichEditor({ initialValue, onChange }: RichEditorProps) {
+  const editorRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== initialValue) {
+      editorRef.current.innerHTML = initialValue || "";
+    }
+  }, [initialValue]);
+
+  function run(command: string, value?: string) {
+    document.execCommand(command, false, value);
+    if (editorRef.current) onChange(editorRef.current.innerHTML);
+  }
+
+  function insertLink() {
+    const url = prompt("Link URL eingeben:", "https://");
+    if (url) run("createLink", url);
+  }
+
+  function insertImage() {
+    const url = prompt("Bild URL eingeben:", "https://");
+    if (url) run("insertImage", url);
+  }
+
+  function insertTable() {
+    run(
+      "insertHTML",
+      '<table border="1" style="border-collapse:collapse;width:100%"><tr><th>Spalte 1</th><th>Spalte 2</th></tr><tr><td>Inhalt</td><td>Inhalt</td></tr></table><p></p>'
+    );
+  }
+
+  return (
+    <div className="rich-editor-wrap">
+      <div className="rich-toolbar">
+        <button type="button" className="ghost" onClick={() => run("bold")}><b>B</b></button>
+        <button type="button" className="ghost" onClick={() => run("italic")}><i>I</i></button>
+        <button type="button" className="ghost" onClick={() => run("underline")}><u>U</u></button>
+        <button type="button" className="ghost" onClick={() => run("formatBlock", "H1")}>H1</button>
+        <button type="button" className="ghost" onClick={() => run("formatBlock", "H2")}>H2</button>
+        <button type="button" className="ghost" onClick={() => run("foreColor", "#0052cc")}>Farbe</button>
+        <button type="button" className="ghost" onClick={insertLink}>Link</button>
+        <button type="button" className="ghost" onClick={insertImage}>Bild</button>
+        <button type="button" className="ghost" onClick={insertTable}>Tabelle</button>
+        <button type="button" className="ghost" onClick={() => run("insertUnorderedList")}>• Liste</button>
+        <button type="button" className="ghost" onClick={() => run("insertOrderedList")}>1. Liste</button>
+      </div>
+      <div
+        ref={editorRef}
+        className="rich-editor"
+        contentEditable
+        suppressContentEditableWarning
+        onInput={() => onChange(editorRef.current?.innerHTML ?? "")}
+      />
+    </div>
+  );
+}
 
 export function HomePage({ token }: { token: string }) {
   const [pages, setPages] = useState<WikiPage[]>([]);
@@ -101,7 +163,7 @@ export function HomePage({ token }: { token: string }) {
         method: "POST",
         body: JSON.stringify({
           title: newTitle,
-          content: newContent || "Neue Seite",
+          content: newContent || "<p>Neue Seite</p>",
           tagNames: ["knowledge", "team"],
           parentId: newParentId || undefined
         })
@@ -144,9 +206,7 @@ export function HomePage({ token }: { token: string }) {
 
         <div className="hwiki-topnav-center">
           <select value={space} onChange={(e) => setSpace(e.target.value)}>
-            {SPACE_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
+            {SPACE_OPTIONS.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
           </select>
           <input
             className="global-search"
@@ -215,7 +275,7 @@ export function HomePage({ token }: { token: string }) {
               {selectedPage ? (
                 <>
                   <small className="muted">Updated: {new Date(selectedPage.updatedAt).toLocaleString()}</small>
-                  <pre>{selectedPage.content}</pre>
+                  <div className="rendered-content" dangerouslySetInnerHTML={{ __html: selectedPage.content }} />
                 </>
               ) : (
                 <p>Wähle eine Seite aus dem Baum oder erstelle eine neue Seite.</p>
@@ -234,23 +294,15 @@ export function HomePage({ token }: { token: string }) {
         {viewMode === "starred" && <section className="card"><h3>Starred Pages</h3><ul>{starredPages.map((p) => <li key={p.id}>{p.title}</li>)}</ul></section>}
         {viewMode === "people" && <section className="card"><h3>People Directory</h3><ul>{peopleDemo.map((person) => <li key={person}>{person}</li>)}</ul></section>}
         {viewMode === "apps" && <section className="card"><h3>Apps & Integrationen</h3><button className="ghost" onClick={() => setActionInfo("Jira-Integration Demo geöffnet.")}>Jira Integration öffnen</button><ul>{appsDemo.map((app) => <li key={app}>{app}</li>)}</ul></section>}
-
-        <section className="card">
-          <h3>Dashboard</h3>
-          <p>Recent Pages: {dashboard?.recentPages.length ?? 0}</p>
-          <p>Assigned to me: 2 Tasks</p>
-          <p>Unread Notifications: {dashboard?.unreadNotifications.length ?? 0}</p>
-          <p>My Comments: {dashboard?.myCommentsCount ?? 0}</p>
-        </section>
       </main>
 
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card large" onClick={(e) => e.stopPropagation()}>
             <h3>Create Seite</h3>
             <form onSubmit={createPage} className="create-form">
               <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Seitentitel" required />
-              <textarea value={newContent} onChange={(e) => setNewContent(e.target.value)} placeholder="Seiteninhalt" required />
+              <RichEditor initialValue={newContent} onChange={setNewContent} />
               <select value={newParentId} onChange={(e) => setNewParentId(e.target.value)}>
                 <option value="">Kein Parent (Root-Seite)</option>
                 {pages.map((p) => <option key={p.id} value={p.id}>Parent: {p.title}</option>)}
@@ -266,11 +318,11 @@ export function HomePage({ token }: { token: string }) {
 
       {showEditModal && (
         <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card large" onClick={(e) => e.stopPropagation()}>
             <h3>Seite bearbeiten</h3>
             <form onSubmit={updatePage} className="create-form">
               <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Seitentitel" required />
-              <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} placeholder="Seiteninhalt" required />
+              <RichEditor initialValue={editContent} onChange={setEditContent} />
               <div className="modal-actions">
                 <button type="button" className="ghost" onClick={() => setShowEditModal(false)}>Abbrechen</button>
                 <button type="submit">Speichern</button>
