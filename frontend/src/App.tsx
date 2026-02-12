@@ -79,7 +79,7 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <h1>Confluence-like Wiki</h1>
+      <h1>Hokkaido-Wiki</h1>
       {message && <p className="banner info">{message}</p>}
       {error && <p className="banner error">{error}</p>}
       {!token && <p style={{ fontSize: 12, opacity: 0.8 }}>API Endpoint: {BASE_URL}</p>}
