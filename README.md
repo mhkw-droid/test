@@ -66,3 +66,24 @@ Kurzregel für dieses Projekt:
 Danach immer:
 1. `docker compose build --no-cache`
 2. `docker compose up -d`
+
+
+## Fix für `mapping key "build" already defined`
+
+Dieser Fehler bedeutet fast immer, dass in `docker-compose.yml` durch einen Merge doppelte Keys im selben Block stehen (z. B. `build:` zweimal unter `frontend:` oder `backend:`).
+
+### Schnellreparatur
+
+1. Datei auf den Repo-Stand zurücksetzen:
+   - `git checkout -- docker-compose.yml`
+2. Syntax prüfen:
+   - `docker compose config`
+3. Danach neu bauen:
+   - `docker compose build --no-cache`
+   - `docker compose up -d`
+
+### Wenn du mitten in einem Merge bist
+
+- Öffne nur `docker-compose.yml` und behalte **genau einen** `build:`-Block pro Service.
+- Es darf je Service nur einmal geben: `build`, `environment`, `depends_on`, `ports`.
+- Danach: `git add docker-compose.yml && git commit`.
