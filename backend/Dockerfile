@@ -13,6 +13,7 @@ RUN apt-get update \
 COPY package*.json ./
 RUN npm config set strict-ssl false && npm install --no-audit --no-fund
 COPY . .
+RUN npx prisma generate
 RUN npm run build
 EXPOSE 4000
 CMD ["npm", "run", "dev"]

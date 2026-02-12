@@ -91,3 +91,16 @@ Warum bisher Drift kam:
 - Beim nächsten Start fehlen sie lokal, Prisma meldet dann „applied migrations missing from local migrations directory“.
 
 Für dieses Projekt daher im Container bitte `prisma db push` statt `migrate dev` verwenden.
+
+
+## Fix für `@prisma/client did not initialize yet`
+
+Wenn Backend-Logs diesen Fehler zeigen, fehlt der generierte Prisma Client im Runtime-Container.
+
+Der Fix ist jetzt im Projekt enthalten:
+- Backend-Dockerfile führt `npx prisma generate` im Build aus.
+- Backend-`dev`-Script führt vor Start erneut `prisma generate` aus.
+
+Danach ausführen:
+1. `docker compose build --no-cache backend`
+2. `docker compose up -d`
