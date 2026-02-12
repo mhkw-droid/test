@@ -6,7 +6,7 @@ Dies ist ein **echter Start der Implementierung** (nicht nur Prompt-Datei):
 - `frontend/` mit React + Vite + TypeScript
 - `docker-compose.yml` für lokalen Start
 
-## Bereits umgesetzt (MVP)
+## Bereits umgesetzt (MVP+)
 
 - Auth: Registrierung + Login mit JWT
 - Rollenmodell: ADMIN / EDITOR / VIEWER
@@ -15,6 +15,9 @@ Dies ist ein **echter Start der Implementierung** (nicht nur Prompt-Datei):
 - Kommentare: threaded vorbereitet über `parentId`
 - Tags: beim Erstellen von Seiten
 - Suche: Textsuche (Titel/Inhalt) + optional Tag-Filter
+- Dashboard: letzte Seiten + persönliche Kennzahlen + ungelesene Benachrichtigungen
+- Notifications: In-App Einträge für wichtige Änderungen
+- Audit Logs: Aktionen für Seiten und Kommentare werden protokolliert
 - Seed-Daten: Demo-User, Tags, Beispielseite, Beispielkommentar
 
 ## Schnellstart
@@ -32,5 +35,5 @@ Dies ist ein **echter Start der Implementierung** (nicht nur Prompt-Datei):
 - Passwort-Reset, Refresh-Token
 - Bereichs-/Seitenrechte feingranular
 - Rich-Text-Editor + Inline-Kommentare im UI
-- Attachments + Notifications + Audit Logs
+- Attachments + Export/Import
 - Tests (Unit/Integration/E2E)

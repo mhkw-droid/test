@@ -6,6 +6,8 @@ import authRoutes from "./routes/authRoutes.js";
 import pageRoutes from "./routes/pageRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
 import searchRoutes from "./routes/searchRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 const app = express();
 
@@ -18,6 +20,8 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/pages", pageRoutes);
 app.use("/api/v1/comments", commentRoutes);
 app.use("/api/v1/search", searchRoutes);
+app.use("/api/v1/dashboard", dashboardRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);

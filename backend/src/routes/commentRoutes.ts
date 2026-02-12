@@ -2,6 +2,8 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../config/prisma.js";
 import { AuthRequest, requireAuth } from "../middleware/auth.js";
+import { writeAuditLog } from "../services/auditService.js";
+import { notifyEditors } from "../services/notificationService.js";
 
 const router = Router();
 
@@ -28,6 +30,15 @@ router.post("/:pageId", requireAuth, async (req: AuthRequest, res) => {
       parentId: parsed.data.parentId
     }
   });
+
+  await writeAuditLog({
+    actorId: req.user!.sub,
+    action: "COMMENT_CREATE",
+    entityType: "Comment",
+    entityId: comment.id,
+    details: `Commented on page ${req.params.pageId}`
+  });
+  await notifyEditors("Neuer Kommentar wurde erstellt");
 
   return res.status(201).json(comment);
 });
