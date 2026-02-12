@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         Role      @default(VIEWER)
+  createdAt    DateTime  @default(now())
+  pages        Page[]
+  comments     Comment[]
+  notifications Notification[]
+  auditLogs    AuditLog[]
+}
+
+model Page {
+  id         String        @id @default(cuid())
+  title      String
+  content    String
+  authorId   String
+  parentId   String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  author     User          @relation(fields: [authorId], references: [id])
+  parent     Page?         @relation("PageHierarchy", fields: [parentId], references: [id])
+  children   Page[]        @relation("PageHierarchy")
+  versions   PageVersion[]
+  comments   Comment[]
+  tags       PageTag[]
+}
+
+model PageVersion {
+  id        String   @id @default(cuid())
+  pageId    String
+  title     String
+  content   String
+  version   Int
+  createdAt DateTime @default(now())
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, version])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  pageId    String
+  authorId  String
+  parentId  String?
+  content   String
+  createdAt DateTime @default(now())
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+  parent    Comment? @relation("CommentThread", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentThread")
+}
+
+model Tag {
+  id    String   @id @default(cuid())
+  name  String   @unique
+  pages PageTag[]
+}
+
+model PageTag {
+  pageId String
+  tagId  String
+  page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([pageId, tagId])
+}
+
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String
+  details    String?
+  createdAt  DateTime @default(now())
+  actor      User?    @relation(fields: [actorId], references: [id])
+}
