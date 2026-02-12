@@ -1,4 +1,15 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api/v1";
+function resolveBaseUrl(): string {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl && String(envUrl).trim().length > 0) {
+    return envUrl;
+  }
+
+  const protocol = window.location.protocol;
+  const hostname = window.location.hostname;
+  return `${protocol}//${hostname}:4000/api/v1`;
+}
+
+const BASE_URL = resolveBaseUrl();
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {
