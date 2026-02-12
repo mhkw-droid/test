@@ -16,8 +16,8 @@ Dieses Repository wurde neu aufgebaut und enthält wieder alle Projektdateien f�
 ## Start (lokal)
 
 1. `docker compose up --build`
-2. Migration ausführen:
-   - `docker compose exec backend npx prisma migrate dev --name init`
+2. Schema synchronisieren (ohne neue Migration-Datei im Container zu erzeugen):
+   - `docker compose exec backend npx prisma db push`
 3. Seed laden:
    - `docker compose exec backend npm run prisma:seed`
 4. Frontend öffnen: `http://localhost:5173`
@@ -51,7 +51,7 @@ Wenn `prisma migrate dev` im Container mit `self-signed certificate in certifica
 Danach bitte ausführen:
 1. `docker compose build --no-cache backend`
 2. `docker compose up -d`
-3. `docker compose exec backend npx prisma migrate dev --name init`
+3. `docker compose exec backend npx prisma db push`
 4. `docker compose exec backend npm run prisma:seed`
 
 
@@ -72,3 +72,22 @@ Frontend neu bauen (wichtig bei URL-Fix):
 - `docker compose build --no-cache frontend`
 - `docker compose up -d`
 - Browser Hard-Reload (Ctrl+F5)
+
+
+## Muss ich jedes Mal neu clonen?
+
+Nein. **Du musst nicht** jedes Mal löschen und neu clonen.
+
+Empfohlener Update-Flow im bestehenden Clone:
+1. `git pull`
+2. `docker compose down`
+3. `docker compose up -d --build`
+4. `docker compose exec backend npx prisma db push`
+5. `docker compose exec backend npm run prisma:seed`
+
+Warum bisher Drift kam:
+- `prisma migrate dev` im laufenden Container erzeugt neue Migration-Dateien **im Container-Dateisystem**.
+- Diese Dateien landen nicht automatisch in deinem Git-Repo auf dem Host.
+- Beim nächsten Start fehlen sie lokal, Prisma meldet dann „applied migrations missing from local migrations directory“.
+
+Für dieses Projekt daher im Container bitte `prisma db push` statt `migrate dev` verwenden.
