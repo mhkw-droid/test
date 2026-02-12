@@ -15,6 +15,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
+app.get("/api/v1", (_req, res) => res.json({ status: "ok", message: "Wiki API ready" }));
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/pages", pageRoutes);
 app.use("/api/v1/comments", commentRoutes);
