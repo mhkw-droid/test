@@ -1,3 +1,4 @@
+version: '3.9'
 services:
   db:
     image: postgres:16-alpine
@@ -15,6 +16,7 @@ services:
       context: ./backend
       args:
         NPM_CONFIG_STRICT_SSL: "false"
+    build: ./backend
     environment:
       DATABASE_URL: postgresql://wiki:wiki@db:5432/wiki?schema=public
       JWT_SECRET: change-me
@@ -29,6 +31,7 @@ services:
       context: ./frontend
       args:
         NPM_CONFIG_STRICT_SSL: "false"
+    build: ./frontend
     environment:
       VITE_API_BASE_URL: http://localhost:4000/api/v1
     depends_on:

@@ -6,6 +6,9 @@ ENV NPM_CONFIG_STRICT_SSL=$NPM_CONFIG_STRICT_SSL
 WORKDIR /app
 COPY package*.json ./
 RUN npm config set strict-ssl false && npm install --no-audit --no-fund
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
 COPY . .
 RUN npm run build
 EXPOSE 4000
