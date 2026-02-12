@@ -4,12 +4,11 @@ function resolveBaseUrl(): string {
     return envUrl;
   }
 
-  const protocol = window.location.protocol;
-  const hostname = window.location.hostname;
-  return `${protocol}//${hostname}:4000/api/v1`;
+  const hostname = window.location.hostname || "localhost";
+  return `http://${hostname}:4000/api/v1`;
 }
 
-const BASE_URL = resolveBaseUrl();
+export const BASE_URL = resolveBaseUrl();
 
 export async function apiFetch<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {

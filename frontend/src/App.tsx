@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { apiFetch } from "./api/client";
+import { BASE_URL, apiFetch } from "./api/client";
 import { AuthForm } from "./components/AuthForm";
 import { HomePage } from "./pages/HomePage";
 import "./styles.css";
@@ -82,6 +82,7 @@ export default function App() {
       <h1>Confluence-like Wiki</h1>
       {message && <p className="banner info">{message}</p>}
       {error && <p className="banner error">{error}</p>}
+      {!token && <p style={{ fontSize: 12, opacity: 0.8 }}>API Endpoint: {BASE_URL}</p>}
 
       {!token ? (
         <section className="auth-grid">

@@ -60,9 +60,15 @@ Danach bitte ausführen:
 Wenn du das Frontend **nicht** auf derselben Maschine im lokalen Browser unter `localhost:5173` öffnest, darf die API-URL nicht hart auf `localhost:4000` zeigen.
 
 Die App nutzt jetzt automatisch:
-- `http(s)://<aktueller-hostname>:4000/api/v1`
+- `http://<aktueller-hostname>:4000/api/v1`
 
 Damit funktionieren Login/Registrierung auch bei Zugriff über Server-IP oder Domain.
 
 
 Hinweis: In `docker-compose.yml` ist bewusst **kein** `VITE_API_BASE_URL=http://localhost:4000` gesetzt, damit die App automatisch den aktuellen Host nutzt und Login/Registrierung auch über Server-IP/Domain funktionieren.
+
+
+Frontend neu bauen (wichtig bei URL-Fix):
+- `docker compose build --no-cache frontend`
+- `docker compose up -d`
+- Browser Hard-Reload (Ctrl+F5)
