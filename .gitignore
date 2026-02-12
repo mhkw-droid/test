@@ -1,7 +1,0 @@
-node_modules
-.env
-*.log
-dist
-coverage
-backend/generated
-frontend/dist
