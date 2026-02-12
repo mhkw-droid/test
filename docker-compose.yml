@@ -19,6 +19,7 @@ services:
       DATABASE_URL: postgresql://wiki:wiki@db:5432/wiki?schema=public
       JWT_SECRET: change-me
       PORT: 4000
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
     depends_on:
       - db
     ports:

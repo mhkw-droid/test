@@ -39,3 +39,17 @@ Dieses Repository wurde neu aufgebaut und enth채lt wieder alle Projektdateien f�
 
 - TLS-Probleme bei `npm install` in Docker sind 체ber `.npmrc` und Dockerfile-Config abgefedert.
 - Falls Docker-CLI nicht installiert ist, funktionieren nur Datei-/Git-Checks, kein Container-Run.
+
+
+## Prisma TLS/Engine Fix (Self-Signed Zertifikate)
+
+Wenn `prisma migrate dev` im Container mit `self-signed certificate in certificate chain` fehlschl채gt:
+
+- Backend l채uft jetzt auf `node:20-bookworm-slim` (statt alpine) und installiert `openssl` + `ca-certificates`.
+- Zus채tzlich ist f체r Unternehmensumgebungen `NODE_TLS_REJECT_UNAUTHORIZED=0` im Backend-Container gesetzt.
+
+Danach bitte ausf체hren:
+1. `docker compose build --no-cache backend`
+2. `docker compose up -d`
+3. `docker compose exec backend npx prisma migrate dev --name init`
+4. `docker compose exec backend npm run prisma:seed`
