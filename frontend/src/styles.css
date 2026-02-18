@@ -657,3 +657,14 @@ button.icon {
 .hwiki-shell.sidebar-collapsed .hwiki-rightbar {
   grid-column: 2 / 3;
 }
+
+.modal-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-title-row h3 {
+  margin: 0;
+}

@@ -20,6 +20,7 @@ type Space = { id: string; name: string; icon: string; description: string };
 type Role = "Admin" | "Editor" | "Viewer";
 type ViewMode = "dashboard" | "page" | "space-settings" | "profile" | "user-settings";
 type CreateType = "page" | "blog" | "space";
+type PrefState = { favorites: Record<string, boolean>; watching: Record<string, boolean>; darkMode: boolean };
 
 type VersionEntry = { id: string; title: string; content: string; updatedAt: string };
 type PageComment = { id: string; pageId: string; parentId?: string; author: string; text: string; selectedText?: string; createdAt: string };
@@ -44,6 +45,19 @@ type RichEditorProps = {
 function RichEditor({ initialValue, onChange }: RichEditorProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const savedRangeRef = useRef<Range | null>(null);
+
+  function saveSelection() {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+  }
+
+  function restoreSelection() {
+    const sel = window.getSelection();
+    if (!sel || !savedRangeRef.current) return;
+    sel.removeAllRanges();
+    sel.addRange(savedRangeRef.current);
+  }
 
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== initialValue) {
@@ -52,6 +66,8 @@ function RichEditor({ initialValue, onChange }: RichEditorProps) {
   }, [initialValue]);
 
   function run(command: string, value?: string) {
+    editorRef.current?.focus();
+    restoreSelection();
     document.execCommand(command, false, value);
     if (editorRef.current) onChange(editorRef.current.innerHTML);
   }
@@ -114,6 +130,8 @@ function RichEditor({ initialValue, onChange }: RichEditorProps) {
         contentEditable
         suppressContentEditableWarning
         onInput={() => onChange(editorRef.current?.innerHTML ?? "")}
+        onMouseUp={saveSelection}
+        onKeyUp={saveSelection}
       />
     </div>
   );
@@ -140,6 +158,8 @@ function safeJson<T>(v: string | null, fallback: T): T {
 }
 
 export function HomePage({ token, onLogout }: { token: string; onLogout: () => void }) {
+  const pref = safeJson<PrefState>(localStorage.getItem(PREF_KEY), { favorites: {}, watching: {}, darkMode: false });
+
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [spaces, setSpaces] = useState<Space[]>(SPACES);
@@ -152,12 +172,12 @@ export function HomePage({ token, onLogout }: { token: string; onLogout: () => v
   const [search, setSearch] = useState("");
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
 
-  const [favorites, setFavorites] = useState<Record<string, boolean>>(() => safeJson(localStorage.getItem(PREF_KEY), {}).favorites ?? {});
-  const [watching, setWatching] = useState<Record<string, boolean>>(() => safeJson(localStorage.getItem(PREF_KEY), {}).watching ?? {});
+  const [favorites, setFavorites] = useState<Record<string, boolean>>(pref.favorites);
+  const [watching, setWatching] = useState<Record<string, boolean>>(pref.watching);
   const [collapsedTree, setCollapsedTree] = useState<Record<string, boolean>>({});
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
-  const [darkMode, setDarkMode] = useState<boolean>(() => safeJson(localStorage.getItem(PREF_KEY), {}).darkMode ?? false);
+  const [darkMode, setDarkMode] = useState<boolean>(pref.darkMode);
   const [role, setRole] = useState<Role>("Admin");
 
   const [showCreateMenu, setShowCreateMenu] = useState(false);
@@ -218,6 +238,8 @@ export function HomePage({ token, onLogout }: { token: string; onLogout: () => v
         { id: "c2", pageId: pageData[0].id, parentId: "c1", author: "admin", text: "Ist angepasst ✅", createdAt: new Date().toISOString() }
       ]);
     }
+
+    return pageData;
   };
 
   useEffect(() => {
@@ -238,10 +260,6 @@ export function HomePage({ token, onLogout }: { token: string; onLogout: () => v
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key.toLowerCase() === "e" && role !== "Viewer" && selectedPage) {
-        e.preventDefault();
-        startEdit();
-      }
       if (e.key === "Escape") {
         setShowCreateMenu(false);
         setShowUserMenu(false);
@@ -337,11 +355,22 @@ export function HomePage({ token, onLogout }: { token: string; onLogout: () => v
       token
     );
 
-    await load();
+    const beforeIds = new Set(pages.map((p) => p.id));
+    const loadedPages = await load();
 
-    const createdPage = pages.find((p) => p.title === newTitle) ?? null;
-    if (createdPage) {
-      setSpaceMap((prev) => ({ ...prev, [createdPage.id]: spaceId }));
+    const createdIds = loadedPages
+      .filter((p) => !beforeIds.has(p.id))
+      .map((p) => p.id);
+
+    if (createdIds.length > 0) {
+      setSpaceMap((prev) => {
+        const next = { ...prev };
+        createdIds.forEach((id) => {
+          next[id] = spaceId;
+        });
+        return next;
+      });
+      setSelectedPageId(createdIds[0]);
     }
 
     setShowCreateModal(false);
@@ -545,7 +574,7 @@ export function HomePage({ token, onLogout }: { token: string; onLogout: () => v
       </header>
 
       {showNotif && <div className="floating-panel">{notifications.length ? notifications.map((n) => <p key={n}>{n}</p>) : <p>Keine Benachrichtigungen.</p>}</div>}
-      {showHelp && <div className="floating-panel help"><p><strong>Shortcuts</strong>: <code>e</code> = editieren, <code>Esc</code> = Menüs schließen.</p></div>}
+      {showHelp && <div className="floating-panel help"><p><strong>Shortcuts</strong>: <code>Esc</code> = Menüs schließen.</p></div>}
 
       {!sidebarCollapsed && (
         <aside className="hwiki-sidebar">
@@ -763,9 +792,9 @@ export function HomePage({ token, onLogout }: { token: string; onLogout: () => v
       )}
 
       {showHistory && selectedPage && (
-        <div className="modal-overlay" onClick={() => setShowHistory(false)}>
-          <div className="modal-card large" onClick={(e) => e.stopPropagation()}>
-            <h3>Version History</h3>
+        <div className="modal-overlay">
+          <div className="modal-card large">
+            <div className="modal-title-row"><h3>Version History</h3><button type="button" className="ghost" onClick={() => setShowHistory(false)}>Schließen</button></div>
             <ul className="history-list">
               {(versionHistory[selectedPage.id] ?? []).map((v) => (
                 <li key={v.id}>
@@ -794,9 +823,9 @@ export function HomePage({ token, onLogout }: { token: string; onLogout: () => v
       )}
 
       {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal-card large" onClick={(e) => e.stopPropagation()}>
-            <h3>{createType === "space" ? "Create Space" : createType === "blog" ? "Create Blog" : "Create Page"}</h3>
+        <div className="modal-overlay">
+          <div className="modal-card large">
+            <div className="modal-title-row"><h3>{createType === "space" ? "Create Space" : createType === "blog" ? "Create Blog" : "Create Page"}</h3><button type="button" className="ghost" onClick={() => setShowCreateModal(false)}>Schließen</button></div>
             <form onSubmit={createEntry} className="create-form">
               <input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Titel" required />
               <RichEditor initialValue={newContent} onChange={setNewContent} />
