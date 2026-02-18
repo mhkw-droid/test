@@ -186,6 +186,7 @@ export function HomePage({ token, onLogout }: { token: string; onLogout: () => v
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("<p>Neue Seite</p>");
   const [newParentId, setNewParentId] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -324,6 +325,10 @@ export function HomePage({ token, onLogout }: { token: string; onLogout: () => v
 
   async function createEntry(e: FormEvent) {
     e.preventDefault();
+    if (!newTitle.trim()) {
+      setActionInfo("Bitte einen Titel eingeben.");
+      return;
+    }
 
     if (createType === "space") {
       const id = newTitle.toLowerCase().trim().replace(/\s+/g, "-");
@@ -341,41 +346,77 @@ export function HomePage({ token, onLogout }: { token: string; onLogout: () => v
       return;
     }
 
-    await apiFetch(
-      "/pages",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          title: createType === "blog" ? `[Blog] ${newTitle}` : newTitle,
-          content: newContent,
-          parentId: createType === "page" ? (newParentId || undefined) : undefined,
-          tagNames: createType === "blog" ? ["blog"] : ["knowledge", "team"]
-        })
-      },
-      token
-    );
-
+    setIsCreating(true);
     const beforeIds = new Set(pages.map((p) => p.id));
-    const loadedPages = await load();
+    const fallbackId = `local-${Date.now()}`;
 
-    const createdIds = loadedPages
-      .filter((p) => !beforeIds.has(p.id))
-      .map((p) => p.id);
+    try {
+      await apiFetch(
+        "/pages",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            title: createType === "blog" ? `[Blog] ${newTitle}` : newTitle,
+            content: newContent,
+            parentId: createType === "page" ? (newParentId || undefined) : undefined,
+            tagNames: createType === "blog" ? ["blog"] : ["knowledge", "team"]
+          })
+        },
+        token
+      );
 
-    if (createdIds.length > 0) {
-      setSpaceMap((prev) => {
-        const next = { ...prev };
-        createdIds.forEach((id) => {
-          next[id] = spaceId;
+      const loadedPages = await load();
+      const createdIds = loadedPages.filter((p) => !beforeIds.has(p.id)).map((p) => p.id);
+
+      if (createdIds.length > 0) {
+        setSpaceMap((prev) => {
+          const next = { ...prev };
+          createdIds.forEach((id) => {
+            next[id] = spaceId;
+          });
+          return next;
         });
-        return next;
-      });
-      setSelectedPageId(createdIds[0]);
-    }
+        setSelectedPageId(createdIds[0]);
+      } else {
+        setPages((prev) => [
+          {
+            id: fallbackId,
+            title: createType === "blog" ? `[Blog] ${newTitle}` : newTitle,
+            content: newContent,
+            updatedAt: new Date().toISOString(),
+            parentId: createType === "page" ? (newParentId || null) : null
+          },
+          ...prev
+        ]);
+        setSpaceMap((prev) => ({ ...prev, [fallbackId]: spaceId }));
+        setSelectedPageId(fallbackId);
+      }
 
-    setShowCreateModal(false);
-    setViewMode("page");
-    setActionInfo(`${createType === "blog" ? "Blogpost" : "Seite"} "${newTitle}" erstellt.`);
+      setActionInfo(`${createType === "blog" ? "Blogpost" : "Seite"} "${newTitle}" erstellt.`);
+    } catch (error) {
+      const createdTitle = createType === "blog" ? `[Blog] ${newTitle}` : newTitle;
+      setPages((prev) => [
+        {
+          id: fallbackId,
+          title: createdTitle,
+          content: newContent,
+          updatedAt: new Date().toISOString(),
+          parentId: createType === "page" ? (newParentId || null) : null
+        },
+        ...prev
+      ]);
+      setSpaceMap((prev) => ({ ...prev, [fallbackId]: spaceId }));
+      setVersionHistory((prev) => ({
+        ...prev,
+        [fallbackId]: [{ id: `v-${fallbackId}-1`, title: createdTitle, content: newContent, updatedAt: new Date().toISOString() }]
+      }));
+      setSelectedPageId(fallbackId);
+      setActionInfo(`Seite lokal erstellt (API Fehler): ${error instanceof Error ? error.message : "Unbekannter Fehler"}`);
+    } finally {
+      setShowCreateModal(false);
+      setViewMode("page");
+      setIsCreating(false);
+    }
   }
 
   function startEdit() {
@@ -837,7 +878,7 @@ export function HomePage({ token, onLogout }: { token: string; onLogout: () => v
               )}
               <div className="modal-actions">
                 <button type="button" className="ghost" onClick={() => setShowCreateModal(false)}>Abbrechen</button>
-                <button type="submit">Erstellen</button>
+                <button type="submit" disabled={isCreating}>{isCreating ? "Erstelle..." : "Erstellen"}</button>
               </div>
             </form>
           </div>
