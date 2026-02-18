@@ -1,0 +1,670 @@
+:root {
+  --bg: #f4f5f7;
+  --panel: #fff;
+  --border: #dfe1e6;
+  --text: #172b4d;
+  --muted: #6b778c;
+  --blue: #0052cc;
+  --blue-weak: #deebff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.app-shell {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.auth-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.auth-form,
+.create-form {
+  display: grid;
+  gap: 10px;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+}
+
+input,
+textarea,
+select {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: var(--blue);
+  color: #fff;
+  cursor: pointer;
+}
+
+button.ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.banner {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.banner.info { background: var(--blue-weak); }
+.banner.error { background: #ffebe6; color: #bf2600; }
+
+/* Hokkaido Wiki Workspace */
+.hwiki-shell {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 12px;
+  min-height: 78vh;
+}
+
+.hwiki-topnav {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1.2fr auto;
+  align-items: center;
+  gap: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.hwiki-topnav-left,
+.hwiki-topnav-center,
+.hwiki-topnav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-pill {
+  background: #e9f2ff;
+  color: var(--blue);
+  border: 1px solid #cce0ff;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 999px;
+}
+
+.global-search {
+  width: 100%;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hwiki-sidebar {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.space-links {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.tree-list,
+.tree-list ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 10px;
+}
+
+.tree-btn {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+  border: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.tree-btn:hover { background: #f1f2f4; }
+.tree-btn.active {
+  background: var(--blue-weak);
+  color: var(--blue);
+  font-weight: 600;
+}
+
+.hwiki-main {
+  display: grid;
+  gap: 12px;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.page-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.muted { color: var(--muted); }
+
+.content-view pre {
+  white-space: pre-wrap;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f7f8fa;
+  padding: 12px;
+}
+
+.page-meta {
+  margin-top: 8px;
+  display: flex;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.grid-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.grid-three {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1100px) {
+  .hwiki-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .hwiki-topnav {
+    grid-template-columns: 1fr;
+  }
+
+  .hwiki-topnav-left,
+  .hwiki-topnav-center,
+  .hwiki-topnav-right {
+    flex-wrap: wrap;
+  }
+
+  .grid-two,
+  .grid-three {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+button.ghost.active {
+  background: var(--blue-weak);
+  color: var(--blue);
+  border-color: #b3d4ff;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 30, 66, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+  padding: 16px;
+}
+
+.modal-card {
+  width: min(620px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 20px 40px rgba(9, 30, 66, 0.25);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+
+.inline-info {
+  background: #e9f2ff;
+  color: #0052cc;
+  border: 1px solid #b3d4ff;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+
+.modal-card.large {
+  width: min(980px, 100%);
+}
+
+.rich-editor-wrap {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.rich-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  background: #f7f8fa;
+}
+
+.rich-toolbar button {
+  padding: 6px 10px;
+}
+
+.rich-editor {
+  min-height: 320px;
+  padding: 12px;
+  outline: none;
+}
+
+.rendered-content table {
+  border-collapse: collapse;
+}
+
+.rendered-content td,
+.rendered-content th {
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+}
+
+/* Extended Confluence-like layout */
+.hwiki-shell {
+  grid-template-columns: 280px minmax(0, 1fr) 290px;
+  grid-template-rows: 64px 1fr;
+  position: relative;
+}
+
+.hwiki-topnav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  margin: -16px -16px 0;
+  padding: 10px 16px;
+  grid-template-columns: 1fr minmax(260px, 1.4fr) auto;
+}
+
+.hwiki-topnav-right .avatar {
+  border: 1px solid var(--border);
+  padding: 0;
+}
+
+.hwiki-sidebar,
+.hwiki-main,
+.hwiki-rightbar {
+  min-height: calc(100vh - 120px);
+}
+
+.hwiki-sidebar,
+.hwiki-rightbar {
+  position: sticky;
+  top: 76px;
+  height: fit-content;
+}
+
+.hwiki-rightbar {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.hwiki-rightbar section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  background: color-mix(in srgb, var(--panel), #fff 20%);
+}
+
+.sidebar-top p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.tree-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 4px;
+}
+
+button.icon {
+  padding: 2px 6px;
+  border: none;
+}
+
+.menu-wrap {
+  position: relative;
+}
+
+.menu-dropdown,
+.search-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 16px 32px rgba(9, 30, 66, 0.16);
+  min-width: 220px;
+  z-index: 30;
+  overflow: hidden;
+}
+
+.menu-dropdown button,
+.search-item {
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  gap: 3px;
+}
+
+.menu-dropdown button:hover,
+.search-item:hover {
+  background: #f1f2f4;
+}
+
+.search-dropdown {
+  left: 0;
+  right: auto;
+  width: 100%;
+}
+
+.search-item span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.floating-panel {
+  position: fixed;
+  top: 70px;
+  right: 22px;
+  width: 320px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 16px 32px rgba(9, 30, 66, 0.2);
+  padding: 12px;
+  z-index: 40;
+}
+
+.floating-panel.help {
+  right: 360px;
+}
+
+.dashboard-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dashboard-grid article {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.mention-box {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.comments-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.comments-list > li {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.comments-list blockquote {
+  margin: 8px 0;
+  border-left: 3px solid var(--blue);
+  padding-left: 10px;
+  color: var(--muted);
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.history-list li {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.diff-view {
+  margin-top: 12px;
+}
+
+.diff-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.diff-grid pre {
+  margin: 0;
+  white-space: pre-wrap;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  padding: 10px;
+  background: #f7f8fa;
+}
+
+.toc-l2 { padding-left: 8px; }
+.toc-l3 { padding-left: 16px; }
+.toc-l4 { padding-left: 24px; }
+.toc-l5 { padding-left: 32px; }
+.toc-l6 { padding-left: 40px; }
+
+.color-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.color-picker input {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.rich-toolbar select {
+  padding: 4px 8px;
+}
+
+.rendered-content img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+.rendered-content pre {
+  background: #172b4d;
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px;
+  overflow-x: auto;
+}
+
+.panel {
+  border-radius: 8px;
+  padding: 10px;
+  margin: 8px 0;
+}
+
+.panel.info { background: #deebff; color: #0747a6; }
+.panel.warning { background: #fffae6; color: #7a5f00; }
+.panel.error { background: #ffebe6; color: #ae2a19; }
+
+.hwiki-shell.dark {
+  --bg: #161a23;
+  --panel: #1f2430;
+  --border: #2f3644;
+  --text: #f1f5ff;
+  --muted: #b6bfd6;
+  --blue-weak: #243b72;
+}
+
+.hwiki-shell.dark .menu-dropdown button:hover,
+.hwiki-shell.dark .search-item:hover,
+.hwiki-shell.dark .tree-btn:hover {
+  background: #2b3447;
+}
+
+@media (max-width: 1280px) {
+  .hwiki-shell {
+    grid-template-columns: 260px 1fr;
+  }
+
+  .hwiki-rightbar {
+    display: none;
+  }
+}
+
+@media (max-width: 980px) {
+  .hwiki-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+
+  .hwiki-topnav {
+    position: relative;
+    margin: 0;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .hwiki-sidebar,
+  .hwiki-rightbar {
+    position: static;
+    min-height: auto;
+  }
+
+  .dashboard-grid,
+  .diff-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hwiki-shell.sidebar-collapsed {
+  grid-template-columns: minmax(0, 1fr) 290px;
+}
+
+.hwiki-shell.rightbar-hidden {
+  grid-template-columns: 280px minmax(0, 1fr);
+}
+
+.hwiki-shell.sidebar-collapsed.rightbar-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.hwiki-shell.sidebar-collapsed .hwiki-main {
+  grid-column: 1 / 2;
+}
+
+.hwiki-shell.sidebar-collapsed .hwiki-rightbar {
+  grid-column: 2 / 3;
+}
+
+.modal-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-title-row h3 {
+  margin: 0;
+}
