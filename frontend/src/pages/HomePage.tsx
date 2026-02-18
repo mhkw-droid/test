@@ -16,41 +16,25 @@ type WikiPage = {
   parentId?: string | null;
 };
 
-type Space = {
-  id: string;
-  name: string;
-  icon: string;
-  description: string;
-};
-
+type Space = { id: string; name: string; icon: string; description: string };
 type Role = "Admin" | "Editor" | "Viewer";
+type ViewMode = "dashboard" | "page" | "space-settings" | "profile" | "user-settings";
+type CreateType = "page" | "blog" | "space";
 
-type ViewMode = "page" | "dashboard" | "recent" | "starred" | "people" | "space-settings";
-
-type VersionEntry = {
-  id: string;
-  title: string;
-  content: string;
-  updatedAt: string;
-};
-
-type PageComment = {
-  id: string;
-  pageId: string;
-  parentId?: string;
-  author: string;
-  text: string;
-  selectedText?: string;
-  createdAt: string;
-};
+type VersionEntry = { id: string; title: string; content: string; updatedAt: string };
+type PageComment = { id: string; pageId: string; parentId?: string; author: string; text: string; selectedText?: string; createdAt: string };
 
 const SPACES: Space[] = [
   { id: "it", name: "IT", icon: "🖥️", description: "Infrastruktur, Betrieb und Security" },
-  { id: "hr", name: "HR", icon: "🧑‍💼", description: "Richtlinien, Onboarding und Recruiting" },
-  { id: "devops", name: "DevOps", icon: "🚀", description: "Deployments, Pipelines und SRE" }
+  { id: "hr", name: "HR", icon: "🧑‍💼", description: "Richtlinien, Recruiting und Onboarding" },
+  { id: "devops", name: "DevOps", icon: "🚀", description: "Deployments, CI/CD und SRE" }
 ];
 
 const PEOPLE = ["admin", "emma", "jonas", "mia", "harvey", "wil"];
+
+const VERSION_KEY = "wiki_versions";
+const SPACE_MAP_KEY = "wiki_page_space_map";
+const PREF_KEY = "wiki_prefs";
 
 type RichEditorProps = {
   initialValue: string;
@@ -59,6 +43,7 @@ type RichEditorProps = {
 
 function RichEditor({ initialValue, onChange }: RichEditorProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== initialValue) {
@@ -71,42 +56,25 @@ function RichEditor({ initialValue, onChange }: RichEditorProps) {
     if (editorRef.current) onChange(editorRef.current.innerHTML);
   }
 
-  function pickColor(e: ChangeEvent<HTMLInputElement>) {
-    run("foreColor", e.target.value);
-  }
-
-  function pickFontSize(value: string) {
-    run("fontSize", value);
-  }
-
-  function insertLink() {
-    const url = prompt("Link URL eingeben:", "https://");
-    if (url) run("createLink", url);
-  }
-
-  function insertImage() {
-    const url = prompt("Bild URL eingeben:", "https://picsum.photos/800/400");
+  function insertImageUrl() {
+    const url = prompt("Bild URL eingeben:", "https://picsum.photos/900/420");
     if (url) run("insertImage", url);
   }
 
-  function insertTable() {
-    run(
-      "insertHTML",
-      '<table><thead><tr><th>Spalte 1</th><th>Spalte 2</th></tr></thead><tbody><tr><td>Inhalt</td><td>Inhalt</td></tr></tbody></table><p></p>'
-    );
+  function uploadImage(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") run("insertImage", reader.result);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   }
 
   function insertPanel(kind: "info" | "warning" | "error") {
     const text = kind === "info" ? "Info Hinweis" : kind === "warning" ? "Warnung" : "Fehler";
-    run("insertHTML", `<div class="panel ${kind}">${text}</div><p></p>`);
-  }
-
-  function insertCodeBlock() {
-    run("insertHTML", '<pre><code>// code block\nconsole.log("Hokkaido Wiki")</code></pre><p></p>');
-  }
-
-  function insertEmoji() {
-    run("insertText", "😀");
+    run("insertHTML", `<div class=\"panel ${kind}\">${text}</div><p></p>`);
   }
 
   return (
@@ -115,30 +83,30 @@ function RichEditor({ initialValue, onChange }: RichEditorProps) {
         <button type="button" className="ghost" onClick={() => run("bold")}>B</button>
         <button type="button" className="ghost" onClick={() => run("italic")}>I</button>
         <button type="button" className="ghost" onClick={() => run("underline")}>U</button>
-        <button type="button" className="ghost" onClick={() => run("formatBlock", "H1")}>H1</button>
-        <button type="button" className="ghost" onClick={() => run("formatBlock", "H2")}>H2</button>
-        <button type="button" className="ghost" onClick={() => run("formatBlock", "H3")}>H3</button>
-        <button type="button" className="ghost" onClick={() => run("formatBlock", "H4")}>H4</button>
-        <button type="button" className="ghost" onClick={() => run("formatBlock", "H5")}>H5</button>
-        <button type="button" className="ghost" onClick={() => run("formatBlock", "H6")}>H6</button>
-        <select onChange={(e) => pickFontSize(e.target.value)} defaultValue="">
+        {([1, 2, 3, 4, 5, 6] as const).map((h) => (
+          <button key={h} type="button" className="ghost" onClick={() => run("formatBlock", `H${h}`)}>{`H${h}`}</button>
+        ))}
+        <select onChange={(e) => run("fontSize", e.target.value)} defaultValue="">
           <option value="" disabled>Schriftgröße</option>
           <option value="2">Klein</option>
           <option value="3">Normal</option>
           <option value="5">Groß</option>
           <option value="7">XL</option>
         </select>
-        <label className="color-picker">Farbe<input type="color" onChange={pickColor} /></label>
-        <button type="button" className="ghost" onClick={insertLink}>Link</button>
-        <button type="button" className="ghost" onClick={insertImage}>Bild</button>
-        <button type="button" className="ghost" onClick={insertTable}>Tabelle</button>
-        <button type="button" className="ghost" onClick={insertCodeBlock}>Code</button>
-        <button type="button" className="ghost" onClick={() => insertPanel("info")}>Info Panel</button>
+        <label className="color-picker">Farbe<input type="color" onChange={(e) => run("foreColor", e.target.value)} /></label>
+        <button type="button" className="ghost" onClick={() => run("createLink", prompt("Link URL:", "https://") ?? "")}>Link</button>
+        <button type="button" className="ghost" onClick={insertImageUrl}>Bild URL</button>
+        <button type="button" className="ghost" onClick={() => fileInputRef.current?.click()}>Bild Upload</button>
+        <input ref={fileInputRef} hidden type="file" accept="image/*" onChange={uploadImage} />
+        <button type="button" className="ghost" onClick={() => run("insertHTML", "<table><thead><tr><th>Spalte 1</th><th>Spalte 2</th></tr></thead><tbody><tr><td>Inhalt</td><td>Inhalt</td></tr></tbody></table><p></p>")}>Tabelle</button>
+        <button type="button" className="ghost" onClick={() => run("insertHTML", "<pre><code>// code\nconsole.log('Hokkaido Wiki');</code></pre><p></p>")}>Code</button>
+        <button type="button" className="ghost" onClick={() => insertPanel("info")}>Info</button>
         <button type="button" className="ghost" onClick={() => insertPanel("warning")}>Warning</button>
         <button type="button" className="ghost" onClick={() => insertPanel("error")}>Error</button>
         <button type="button" className="ghost" onClick={() => run("insertUnorderedList")}>• Liste</button>
         <button type="button" className="ghost" onClick={() => run("insertOrderedList")}>1. Liste</button>
-        <button type="button" className="ghost" onClick={insertEmoji}>😀</button>
+        <button type="button" className="ghost" onClick={() => run("insertText", "@admin ")}>@Mention</button>
+        <button type="button" className="ghost" onClick={() => run("insertText", "😀")}>😀</button>
       </div>
       <div
         ref={editorRef}
@@ -155,32 +123,46 @@ function stripHtml(html: string) {
   return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-function buildSnippet(content: string, q: string) {
+function snippet(content: string, q: string) {
   const text = stripHtml(content);
   const idx = text.toLowerCase().indexOf(q.toLowerCase());
-  if (idx === -1) return text.slice(0, 120);
-  return text.slice(Math.max(0, idx - 20), idx + 120);
+  if (idx < 0) return text.slice(0, 120);
+  return text.slice(Math.max(0, idx - 30), idx + 120);
 }
 
-export function HomePage({ token }: { token: string }) {
+function safeJson<T>(v: string | null, fallback: T): T {
+  if (!v) return fallback;
+  try {
+    return JSON.parse(v) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+export function HomePage({ token, onLogout }: { token: string; onLogout: () => void }) {
   const [pages, setPages] = useState<WikiPage[]>([]);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
-  const [search, setSearch] = useState("");
+  const [spaces, setSpaces] = useState<Space[]>(SPACES);
   const [spaceId, setSpaceId] = useState(SPACES[0].id);
+  const [spaceMap, setSpaceMap] = useState<Record<string, string>>(() => safeJson(localStorage.getItem(SPACE_MAP_KEY), {}));
   const [viewMode, setViewMode] = useState<ViewMode>("dashboard");
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
   const [actionInfo, setActionInfo] = useState("");
 
-  const [favorites, setFavorites] = useState<Record<string, boolean>>({});
-  const [watching, setWatching] = useState<Record<string, boolean>>({});
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [search, setSearch] = useState("");
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+
+  const [favorites, setFavorites] = useState<Record<string, boolean>>(() => safeJson(localStorage.getItem(PREF_KEY), {}).favorites ?? {});
+  const [watching, setWatching] = useState<Record<string, boolean>>(() => safeJson(localStorage.getItem(PREF_KEY), {}).watching ?? {});
+  const [collapsedTree, setCollapsedTree] = useState<Record<string, boolean>>({});
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState<boolean>(() => safeJson(localStorage.getItem(PREF_KEY), {}).darkMode ?? false);
   const [role, setRole] = useState<Role>("Admin");
 
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createType, setCreateType] = useState<"page" | "blog" | "space">("page");
+  const [createType, setCreateType] = useState<CreateType>("page");
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("<p>Neue Seite</p>");
   const [newParentId, setNewParentId] = useState("");
@@ -189,8 +171,8 @@ export function HomePage({ token }: { token: string }) {
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
 
-  const [versionHistory, setVersionHistory] = useState<Record<string, VersionEntry[]>>({});
   const [showHistory, setShowHistory] = useState(false);
+  const [versionHistory, setVersionHistory] = useState<Record<string, VersionEntry[]>>(() => safeJson(localStorage.getItem(VERSION_KEY), {}));
   const [diffVersion, setDiffVersion] = useState<VersionEntry | null>(null);
 
   const [comments, setComments] = useState<PageComment[]>([]);
@@ -198,39 +180,44 @@ export function HomePage({ token }: { token: string }) {
   const [replyTarget, setReplyTarget] = useState<string | null>(null);
   const [selectedText, setSelectedText] = useState("");
 
-  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showSpaceSettings, setShowSpaceSettings] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+
   const [spaceNameDraft, setSpaceNameDraft] = useState("");
   const [spaceDescDraft, setSpaceDescDraft] = useState("");
-  const [spaces, setSpaces] = useState<Space[]>(SPACES);
 
   const dragPageId = useRef<string | null>(null);
 
   const selectedSpace = useMemo(() => spaces.find((s) => s.id === spaceId) ?? spaces[0], [spaces, spaceId]);
 
   const load = async () => {
-    const [p, d] = await Promise.all([
+    const [pageData, dashboardData] = await Promise.all([
       apiFetch<WikiPage[]>("/pages", {}, token),
       apiFetch<Dashboard>("/dashboard", {}, token)
     ]);
-    const spaced = p.map((page, idx) => ({ ...page, parentId: page.parentId ?? null, spaceId: idx % spaces.length === 1 ? "hr" : idx % spaces.length === 2 ? "devops" : "it" })) as (WikiPage & { spaceId: string })[];
-    setPages(spaced as unknown as WikiPage[]);
-    setDashboard(d);
-    if (!selectedPageId && spaced.length > 0) setSelectedPageId(spaced[0].id);
 
-    const initialVersions: Record<string, VersionEntry[]> = {};
-    spaced.forEach((page) => {
-      initialVersions[page.id] = [{ id: `v-${page.id}-1`, title: page.title, content: page.content, updatedAt: page.updatedAt }];
+    setPages(pageData);
+    setDashboard(dashboardData);
+    if (!selectedPageId && pageData.length > 0) setSelectedPageId(pageData[0].id);
+
+    setVersionHistory((prev) => {
+      const next = { ...prev };
+      pageData.forEach((page) => {
+        if (!next[page.id] || next[page.id].length === 0) {
+          next[page.id] = [{ id: `v-${page.id}-1`, title: page.title, content: page.content, updatedAt: page.updatedAt }];
+        }
+      });
+      return next;
     });
-    setVersionHistory(initialVersions);
 
-    setComments([
-      { id: "c1", pageId: spaced[0]?.id ?? "", author: "emma", text: "@admin bitte Abschnitt 2 prüfen", createdAt: new Date().toISOString() },
-      { id: "c2", pageId: spaced[0]?.id ?? "", parentId: "c1", author: "admin", text: "Erledigt ✅", createdAt: new Date().toISOString() }
-    ].filter((c) => c.pageId));
+    if (comments.length === 0 && pageData[0]) {
+      setComments([
+        { id: "c1", pageId: pageData[0].id, author: "emma", text: "@admin Bitte Struktur prüfen", createdAt: new Date().toISOString() },
+        { id: "c2", pageId: pageData[0].id, parentId: "c1", author: "admin", text: "Ist angepasst ✅", createdAt: new Date().toISOString() }
+      ]);
+    }
   };
 
   useEffect(() => {
@@ -238,10 +225,27 @@ export function HomePage({ token }: { token: string }) {
   }, []);
 
   useEffect(() => {
+    localStorage.setItem(VERSION_KEY, JSON.stringify(versionHistory));
+  }, [versionHistory]);
+
+  useEffect(() => {
+    localStorage.setItem(SPACE_MAP_KEY, JSON.stringify(spaceMap));
+  }, [spaceMap]);
+
+  useEffect(() => {
+    localStorage.setItem(PREF_KEY, JSON.stringify({ favorites, watching, darkMode }));
+  }, [favorites, watching, darkMode]);
+
+  useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key.toLowerCase() === "e" && role !== "Viewer" && selectedPage) {
         e.preventDefault();
         startEdit();
+      }
+      if (e.key === "Escape") {
+        setShowCreateMenu(false);
+        setShowUserMenu(false);
+        setShowMoreMenu(false);
       }
     }
     window.addEventListener("keydown", onKey);
@@ -249,8 +253,8 @@ export function HomePage({ token }: { token: string }) {
   });
 
   const currentPages = useMemo(
-    () => (pages as (WikiPage & { spaceId?: string })[]).filter((p) => (p.spaceId ?? "it") === spaceId),
-    [pages, spaceId]
+    () => pages.filter((p) => (spaceMap[p.id] ?? "it") === spaceId),
+    [pages, spaceMap, spaceId]
   );
 
   const selectedPage = useMemo(
@@ -259,15 +263,20 @@ export function HomePage({ token }: { token: string }) {
   );
 
   const rootPages = useMemo(() => currentPages.filter((p) => !p.parentId), [currentPages]);
-  const childPages = (parentId: string) => currentPages.filter((p) => p.parentId === parentId);
+  const children = (parentId: string) => currentPages.filter((p) => p.parentId === parentId);
 
   const searchResults = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return [];
-    return (pages as (WikiPage & { spaceId?: string })[])
+    if (!q) return [] as WikiPage[];
+    return pages
       .filter((p) => p.title.toLowerCase().includes(q) || stripHtml(p.content).toLowerCase().includes(q))
       .slice(0, 8);
-  }, [search, pages]);
+  }, [pages, search]);
+
+  const pageComments = useMemo(
+    () => comments.filter((c) => c.pageId === selectedPage?.id && !c.parentId),
+    [comments, selectedPage?.id]
+  );
 
   const mentions = useMemo(() => {
     const m = commentText.match(/@([a-zA-Z0-9_]*)$/);
@@ -275,29 +284,18 @@ export function HomePage({ token }: { token: string }) {
     return PEOPLE.filter((u) => u.startsWith(m[1].toLowerCase())).slice(0, 5);
   }, [commentText]);
 
-  const pageComments = useMemo(
-    () => comments.filter((c) => c.pageId === selectedPage?.id && !c.parentId),
-    [comments, selectedPage?.id]
-  );
-
   const toc = useMemo(() => {
     if (!selectedPage) return [] as { text: string; level: string }[];
     const matches = selectedPage.content.match(/<h[1-6][^>]*>.*?<\/h[1-6]>/gi) ?? [];
-    return matches.map((m) => ({
-      text: m.replace(/<[^>]*>/g, ""),
-      level: (m.match(/<h([1-6])/)?.[1] ?? "1")
-    }));
+    return matches.map((m) => ({ text: m.replace(/<[^>]*>/g, ""), level: m.match(/<h([1-6])/)?.[1] ?? "1" }));
   }, [selectedPage]);
 
-  function toggleFavorite(id: string) {
-    setFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
-  }
+  const notifications = [
+    ...(dashboard?.unreadNotifications ?? []).map((n) => n.message),
+    ...Object.entries(watching).filter(([, v]) => v).map(([id]) => `Watching: ${pages.find((p) => p.id === id)?.title ?? id}`)
+  ];
 
-  function toggleWatch(id: string) {
-    setWatching((prev) => ({ ...prev, [id]: !prev[id] }));
-  }
-
-  function openCreate(type: "page" | "blog" | "space") {
+  function openCreate(type: CreateType) {
     setCreateType(type);
     setNewTitle("");
     setNewContent("<p>Neue Seite</p>");
@@ -310,24 +308,42 @@ export function HomePage({ token }: { token: string }) {
     e.preventDefault();
 
     if (createType === "space") {
-      const id = newTitle.toLowerCase().replace(/\s+/g, "-");
-      const newSpace = { id, name: newTitle, icon: "📁", description: stripHtml(newContent).slice(0, 120) };
-      setSpaces((prev) => [...prev, newSpace]);
+      const id = newTitle.toLowerCase().trim().replace(/\s+/g, "-");
+      if (!id) return;
+      if (spaces.some((s) => s.id === id)) {
+        setActionInfo("Space existiert bereits.");
+        return;
+      }
+      const created = { id, name: newTitle, icon: "📁", description: stripHtml(newContent).slice(0, 150) };
+      setSpaces((prev) => [...prev, created]);
       setSpaceId(id);
-      setActionInfo(`Space "${newTitle}" erstellt.`);
       setShowCreateModal(false);
+      setViewMode("dashboard");
+      setActionInfo(`Space "${newTitle}" erstellt.`);
       return;
     }
 
-    const payload = {
-      title: createType === "blog" ? `[Blog] ${newTitle}` : newTitle,
-      content: newContent,
-      parentId: createType === "blog" ? undefined : newParentId || undefined,
-      tagNames: createType === "blog" ? ["blog"] : ["knowledge", "team"]
-    };
+    await apiFetch(
+      "/pages",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          title: createType === "blog" ? `[Blog] ${newTitle}` : newTitle,
+          content: newContent,
+          parentId: createType === "page" ? (newParentId || undefined) : undefined,
+          tagNames: createType === "blog" ? ["blog"] : ["knowledge", "team"]
+        })
+      },
+      token
+    );
 
-    await apiFetch("/pages", { method: "POST", body: JSON.stringify(payload) }, token);
     await load();
+
+    const createdPage = pages.find((p) => p.title === newTitle) ?? null;
+    if (createdPage) {
+      setSpaceMap((prev) => ({ ...prev, [createdPage.id]: spaceId }));
+    }
+
     setShowCreateModal(false);
     setViewMode("page");
     setActionInfo(`${createType === "blog" ? "Blogpost" : "Seite"} "${newTitle}" erstellt.`);
@@ -358,8 +374,49 @@ export function HomePage({ token }: { token: string }) {
 
     setVersionHistory((prev) => ({ ...prev, [selectedPage.id]: [...(prev[selectedPage.id] ?? []), oldVersion] }));
     setIsEditing(false);
-    setActionInfo("Seite gespeichert. Neue Version erzeugt.");
+    setActionInfo("Seite gespeichert. Version aktualisiert.");
     await load();
+  }
+
+  async function deletePage() {
+    if (!selectedPage || role === "Viewer") return;
+    await apiFetch(`/pages/${selectedPage.id}`, { method: "DELETE" }, token);
+    setShowMoreMenu(false);
+    setActionInfo(`Seite "${selectedPage.title}" gelöscht.`);
+    setSelectedPageId(null);
+    await load();
+  }
+
+  async function duplicatePage() {
+    if (!selectedPage || role === "Viewer") return;
+    const title = `${selectedPage.title} (Copy)`;
+    await apiFetch(
+      "/pages",
+      { method: "POST", body: JSON.stringify({ title, content: selectedPage.content, parentId: selectedPage.parentId || undefined, tagNames: ["copy"] }) },
+      token
+    );
+    setShowMoreMenu(false);
+    setActionInfo(`Seite dupliziert: ${title}`);
+    await load();
+  }
+
+  async function sharePage() {
+    if (!selectedPage) return;
+    const link = `${window.location.origin}/page/${selectedPage.id}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setActionInfo("Seitenlink in Zwischenablage kopiert.");
+    } catch {
+      setActionInfo(`Seitenlink: ${link}`);
+    }
+  }
+
+  function toggleFavorite(pageId: string) {
+    setFavorites((prev) => ({ ...prev, [pageId]: !prev[pageId] }));
+  }
+
+  function toggleWatch(pageId: string) {
+    setWatching((prev) => ({ ...prev, [pageId]: !prev[pageId] }));
   }
 
   function restoreVersion(v: VersionEntry) {
@@ -368,7 +425,15 @@ export function HomePage({ token }: { token: string }) {
     setIsEditing(true);
     setShowHistory(false);
     setDiffVersion(v);
-    setActionInfo(`Version vom ${new Date(v.updatedAt).toLocaleString()} geladen.`);
+  }
+
+  function captureSelection() {
+    const selected = window.getSelection()?.toString().trim();
+    if (selected) setSelectedText(selected);
+  }
+
+  function applyMention(user: string) {
+    setCommentText((prev) => prev.replace(/@([a-zA-Z0-9_]*)$/, `@${user} `));
   }
 
   function addComment(e: FormEvent) {
@@ -391,48 +456,36 @@ export function HomePage({ token }: { token: string }) {
     setSelectedText("");
   }
 
-  function applyMention(user: string) {
-    setCommentText((prev) => prev.replace(/@([a-zA-Z0-9_]*)$/, `@${user} `));
-  }
-
-  function captureSelection() {
-    const text = window.getSelection()?.toString().trim() ?? "";
-    setSelectedText(text);
-  }
-
-  function handleDragStart(pageId: string) {
+  function startDrag(pageId: string) {
     dragPageId.current = pageId;
   }
 
-  function movePageToParent(targetParentId: string | null) {
+  async function dropOn(targetParentId: string | null) {
     const dragged = dragPageId.current;
     if (!dragged || dragged === targetParentId) return;
-    setPages((prev) =>
-      (prev as (WikiPage & { spaceId?: string })[]).map((p) =>
-        p.id === dragged ? { ...p, parentId: targetParentId } : p
-      ) as WikiPage[]
-    );
-    setActionInfo("Seite im Baum verschoben.");
+
+    const draggedPage = pages.find((p) => p.id === dragged);
+    if (!draggedPage) return;
+
+    await apiFetch(`/pages/${dragged}`, { method: "PUT", body: JSON.stringify({ title: draggedPage.title, content: draggedPage.content, parentId: targetParentId ?? undefined }) }, token);
+    setActionInfo("Seitenbaum aktualisiert.");
+    await load();
   }
 
   function saveSpaceSettings(e: FormEvent) {
     e.preventDefault();
-    if (!selectedSpace) return;
     setSpaces((prev) => prev.map((s) => (s.id === selectedSpace.id ? { ...s, name: spaceNameDraft || s.name, description: spaceDescDraft || s.description } : s)));
-    setShowSpaceSettings(false);
     setActionInfo("Space-Einstellungen gespeichert.");
+    setViewMode("dashboard");
   }
 
   const favoritePages = currentPages.filter((p) => favorites[p.id]);
-  const notifications = [
-    ...(dashboard?.unreadNotifications ?? []).map((n) => n.message),
-    ...Object.entries(watching).filter(([, v]) => v).map(([id]) => `Updates für Seite ${currentPages.find((p) => p.id === id)?.title ?? id}`)
-  ];
 
   return (
-    <div className={`hwiki-shell ${darkMode ? "dark" : ""}`}>
+    <div className={`hwiki-shell ${darkMode ? "dark" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${!showRightSidebar ? "rightbar-hidden" : ""}`}>
       <header className="hwiki-topnav">
         <div className="hwiki-topnav-left">
+          <button className="ghost" onClick={() => setSidebarCollapsed((v) => !v)}>{sidebarCollapsed ? "☰" : "⇤"}</button>
           <div className="brand-pill">❄️ Hokkaido Wiki</div>
           <select value={spaceId} onChange={(e) => { setSpaceId(e.target.value); setViewMode("dashboard"); }}>
             {spaces.map((s) => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
@@ -442,7 +495,7 @@ export function HomePage({ token }: { token: string }) {
         <div className="hwiki-topnav-center">
           <input
             className="global-search"
-            placeholder="Search in pages, blogs, attachments..."
+            placeholder="Search in title/content"
             value={search}
             onFocus={() => setShowSearchDropdown(true)}
             onBlur={() => setTimeout(() => setShowSearchDropdown(false), 180)}
@@ -454,10 +507,10 @@ export function HomePage({ token }: { token: string }) {
           {showSearchDropdown && search && (
             <div className="search-dropdown">
               {searchResults.length === 0 && <div className="search-item muted">Keine Treffer</div>}
-              {searchResults.map((r) => (
-                <button key={r.id} className="search-item" onClick={() => { setSelectedPageId(r.id); setViewMode("page"); setSearch(""); }}>
-                  <strong>{r.title}</strong>
-                  <span>{buildSnippet(r.content, search)}</span>
+              {searchResults.map((p) => (
+                <button key={p.id} className="search-item" onClick={() => { setSelectedPageId(p.id); setSpaceId(spaceMap[p.id] ?? "it"); setViewMode("page"); setSearch(""); }}>
+                  <strong>{p.title}</strong>
+                  <span>{snippet(p.content, search)}</span>
                 </button>
               ))}
             </div>
@@ -482,9 +535,9 @@ export function HomePage({ token }: { token: string }) {
             <button className="avatar" onClick={() => setShowUserMenu((v) => !v)}>HK</button>
             {showUserMenu && (
               <div className="menu-dropdown">
-                <button onClick={() => setActionInfo("Profil geöffnet")}>Profile</button>
-                <button onClick={() => setActionInfo("User Settings geöffnet")}>Settings</button>
-                <button onClick={() => setActionInfo("Logout oben rechts verfügbar")}>Logout</button>
+                <button onClick={() => { setViewMode("profile"); setShowUserMenu(false); }}>Profile</button>
+                <button onClick={() => { setViewMode("user-settings"); setShowUserMenu(false); }}>Settings</button>
+                <button onClick={onLogout}>Logout</button>
               </div>
             )}
           </div>
@@ -492,54 +545,44 @@ export function HomePage({ token }: { token: string }) {
       </header>
 
       {showNotif && <div className="floating-panel">{notifications.length ? notifications.map((n) => <p key={n}>{n}</p>) : <p>Keine Benachrichtigungen.</p>}</div>}
-      {showHelp && <div className="floating-panel help"><p><strong>Shortcuts:</strong> Taste <code>e</code> zum Editieren.</p><p><strong>Tip:</strong> Markiere Text in der Seite für Inline-Kommentare.</p></div>}
+      {showHelp && <div className="floating-panel help"><p><strong>Shortcuts</strong>: <code>e</code> = editieren, <code>Esc</code> = Menüs schließen.</p></div>}
 
-      <aside className="hwiki-sidebar">
-        <div className="sidebar-top">
-          <h3>{selectedSpace.icon} {selectedSpace.name}</h3>
-          <p>{selectedSpace.description}</p>
-          <button onClick={() => openCreate("page")}>Create Page</button>
-          <button className="ghost" onClick={() => { setViewMode("space-settings"); setShowSpaceSettings(true); setSpaceNameDraft(selectedSpace.name); setSpaceDescDraft(selectedSpace.description); }}>Space Settings</button>
-        </div>
+      {!sidebarCollapsed && (
+        <aside className="hwiki-sidebar">
+          <div className="sidebar-top">
+            <h3>{selectedSpace.icon} {selectedSpace.name}</h3>
+            <p>{selectedSpace.description}</p>
+            <button onClick={() => openCreate("page")}>Create Page</button>
+            <button className="ghost" onClick={() => { setSpaceNameDraft(selectedSpace.name); setSpaceDescDraft(selectedSpace.description); setViewMode("space-settings"); }}>Space Settings</button>
+          </div>
 
-        <h4>Page Tree</h4>
-        <button className="ghost" onClick={() => movePageToParent(null)}>Drop to root</button>
-        <ul className="tree-list">
-          {rootPages.map((root) => (
-            <li
-              key={root.id}
-              draggable
-              onDragStart={() => handleDragStart(root.id)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => movePageToParent(root.id)}
-            >
-              <div className="tree-row">
-                <button className="ghost icon" onClick={() => setCollapsed((prev) => ({ ...prev, [root.id]: !prev[root.id] }))}>{collapsed[root.id] ? "▸" : "▾"}</button>
-                <button className={selectedPage?.id === root.id ? "tree-btn active" : "tree-btn"} onClick={() => { setSelectedPageId(root.id); setViewMode("page"); }}>📄 {root.title}</button>
-                <button className="ghost icon" onClick={() => toggleFavorite(root.id)}>{favorites[root.id] ? "⭐" : "☆"}</button>
-              </div>
-              {!collapsed[root.id] && childPages(root.id).length > 0 && (
-                <ul>
-                  {childPages(root.id).map((child) => (
-                    <li
-                      key={child.id}
-                      draggable
-                      onDragStart={() => handleDragStart(child.id)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={() => movePageToParent(child.id)}
-                    >
-                      <div className="tree-row">
-                        <button className={selectedPage?.id === child.id ? "tree-btn active" : "tree-btn"} onClick={() => { setSelectedPageId(child.id); setViewMode("page"); }}>↳ 📄 {child.title}</button>
-                        <button className="ghost icon" onClick={() => toggleFavorite(child.id)}>{favorites[child.id] ? "⭐" : "☆"}</button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ul>
-      </aside>
+          <h4>Page Tree</h4>
+          <button className="ghost" onClick={() => dropOn(null)}>Drop to root</button>
+          <ul className="tree-list">
+            {rootPages.map((root) => (
+              <li key={root.id} draggable onDragStart={() => startDrag(root.id)} onDragOver={(e) => e.preventDefault()} onDrop={() => dropOn(root.id)}>
+                <div className="tree-row">
+                  <button className="ghost icon" onClick={() => setCollapsedTree((prev) => ({ ...prev, [root.id]: !prev[root.id] }))}>{collapsedTree[root.id] ? "▸" : "▾"}</button>
+                  <button className={selectedPage?.id === root.id ? "tree-btn active" : "tree-btn"} onClick={() => { setSelectedPageId(root.id); setViewMode("page"); }}>📄 {root.title}</button>
+                  <button className="ghost icon" onClick={() => toggleFavorite(root.id)}>{favorites[root.id] ? "⭐" : "☆"}</button>
+                </div>
+                {!collapsedTree[root.id] && children(root.id).length > 0 && (
+                  <ul>
+                    {children(root.id).map((child) => (
+                      <li key={child.id} draggable onDragStart={() => startDrag(child.id)} onDragOver={(e) => e.preventDefault()} onDrop={() => dropOn(child.id)}>
+                        <div className="tree-row">
+                          <button className={selectedPage?.id === child.id ? "tree-btn active" : "tree-btn"} onClick={() => { setSelectedPageId(child.id); setViewMode("page"); }}>↳ 📄 {child.title}</button>
+                          <button className="ghost icon" onClick={() => toggleFavorite(child.id)}>{favorites[child.id] ? "⭐" : "☆"}</button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        </aside>
+      )}
 
       <main className="hwiki-main">
         {actionInfo && <div className="inline-info">{actionInfo}</div>}
@@ -547,29 +590,49 @@ export function HomePage({ token }: { token: string }) {
         {viewMode === "dashboard" && (
           <section className="card">
             <h2>{selectedSpace.name} Dashboard</h2>
-            <p>{selectedSpace.description}</p>
             <div className="dashboard-grid">
               <article>
                 <h4>Recently viewed</h4>
                 <ul>{(dashboard?.recentPages ?? []).slice(0, 5).map((p) => <li key={p.id}>{p.title}</li>)}</ul>
               </article>
               <article>
-                <h4>Recently updated</h4>
+                <h4>Recent updates</h4>
                 <ul>{currentPages.slice(0, 5).map((p) => <li key={p.id}>{p.title}</li>)}</ul>
               </article>
               <article>
-                <h4>Favorite pages</h4>
+                <h4>Favorites</h4>
                 <ul>{favoritePages.length ? favoritePages.map((p) => <li key={p.id}>{p.title}</li>) : <li>Keine Favoriten</li>}</ul>
               </article>
               <article>
-                <h4>Activity feed</h4>
+                <h4>Activity Feed</h4>
                 <p>{dashboard?.myCommentsCount ?? 0} Kommentare, {dashboard?.myPagesCount ?? 0} Seiten.</p>
               </article>
             </div>
           </section>
         )}
 
-        {viewMode === "space-settings" && showSpaceSettings && (
+        {viewMode === "profile" && (
+          <section className="card">
+            <h2>User Profile</h2>
+            <p>Name: Hokkaido Admin</p>
+            <p>Rolle: {role}</p>
+            <p>Beobachtete Seiten: {Object.values(watching).filter(Boolean).length}</p>
+            <p>Favoriten: {Object.values(favorites).filter(Boolean).length}</p>
+          </section>
+        )}
+
+        {viewMode === "user-settings" && (
+          <section className="card">
+            <h2>User Settings</h2>
+            <div className="create-form">
+              <input value="Hokkaido Admin" readOnly />
+              <input value="HK" readOnly />
+              <button onClick={() => setActionInfo("User Settings gespeichert (lokal)")}>Speichern</button>
+            </div>
+          </section>
+        )}
+
+        {viewMode === "space-settings" && (
           <section className="card">
             <h2>Space Settings</h2>
             <form onSubmit={saveSpaceSettings} className="create-form">
@@ -581,10 +644,6 @@ export function HomePage({ token }: { token: string }) {
             </form>
           </section>
         )}
-
-        {viewMode === "recent" && <section className="card"><h3>Recent Pages</h3><ul>{(dashboard?.recentPages ?? []).map((p) => <li key={p.id}>{p.title}</li>)}</ul></section>}
-        {viewMode === "starred" && <section className="card"><h3>Starred Pages</h3><ul>{favoritePages.map((p) => <li key={p.id}>{p.title}</li>)}</ul></section>}
-        {viewMode === "people" && <section className="card"><h3>People Directory</h3><ul>{PEOPLE.map((person) => <li key={person}>{person}</li>)}</ul></section>}
 
         {viewMode === "page" && (
           <>
@@ -599,81 +658,82 @@ export function HomePage({ token }: { token: string }) {
                   <option>Editor</option>
                   <option>Viewer</option>
                 </select>
-                <button className="ghost" onClick={() => setViewMode("dashboard")}>Overview</button>
-                <button className="ghost" disabled={role === "Viewer"} onClick={startEdit}>Edit</button>
-                <button className="ghost" onClick={() => setActionInfo("Share-Link in Zwischenablage kopiert")}>Share</button>
-                <button className="ghost" onClick={() => selectedPage && toggleWatch(selectedPage.id)}>{selectedPage && watching[selectedPage.id] ? "Watching" : "Watch"}</button>
-                <button className="ghost" onClick={() => setShowHistory(true)}>History</button>
+                <button className="ghost" disabled={role === "Viewer" || !selectedPage} onClick={startEdit}>Edit</button>
+                <button className="ghost" disabled={!selectedPage} onClick={sharePage}>Share</button>
+                <button className="ghost" disabled={!selectedPage} onClick={() => selectedPage && toggleWatch(selectedPage.id)}>{selectedPage && watching[selectedPage.id] ? "Watching" : "Watch"}</button>
                 <button className="ghost" onClick={() => setShowRightSidebar((v) => !v)}>{showRightSidebar ? "Hide" : "Show"} Info</button>
+                <div className="menu-wrap">
+                  <button className="ghost" onClick={() => setShowMoreMenu((v) => !v)}>…</button>
+                  {showMoreMenu && (
+                    <div className="menu-dropdown">
+                      <button onClick={duplicatePage}>Copy</button>
+                      <button onClick={() => { setShowHistory(true); setShowMoreMenu(false); }}>Page History</button>
+                      <button onClick={deletePage}>Delete</button>
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
 
             <section className="card content-view" onMouseUp={captureSelection}>
-              {selectedPage ? (
-                isEditing ? (
-                  <>
-                    <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
-                    <RichEditor initialValue={editContent} onChange={setEditContent} />
-                    <div className="modal-actions">
-                      <button className="ghost" onClick={() => setIsEditing(false)}>Abbrechen</button>
-                      <button onClick={saveEdit}>Speichern</button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <small className="muted">Updated: {new Date(selectedPage.updatedAt).toLocaleString()}</small>
-                    <div className="rendered-content" dangerouslySetInnerHTML={{ __html: selectedPage.content }} />
-                  </>
-                )
-              ) : (
-                <p>Wähle eine Seite aus dem Baum oder erstelle eine neue Seite.</p>
+              {!selectedPage && <p>Wähle eine Seite aus dem Baum oder erstelle eine neue Seite.</p>}
+              {selectedPage && !isEditing && (
+                <>
+                  <small className="muted">Updated: {new Date(selectedPage.updatedAt).toLocaleString()}</small>
+                  <div className="rendered-content" dangerouslySetInnerHTML={{ __html: selectedPage.content }} />
+                </>
+              )}
+              {selectedPage && isEditing && (
+                <>
+                  <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                  <RichEditor initialValue={editContent} onChange={setEditContent} />
+                  <div className="modal-actions">
+                    <button className="ghost" onClick={() => setIsEditing(false)}>Abbrechen</button>
+                    <button onClick={saveEdit}>Speichern</button>
+                  </div>
+                </>
               )}
               <div className="page-meta">
-                <span>Labels: knowledge, team</span>
                 <span>{selectedPage && favorites[selectedPage.id] ? "⭐ Favorit" : "☆ Kein Favorit"}</span>
                 <span>{selectedPage && watching[selectedPage.id] ? "Watching: on" : "Watching: off"}</span>
                 <span>Versionen: {selectedPage ? (versionHistory[selectedPage.id]?.length ?? 0) : 0}</span>
               </div>
             </section>
 
-            <section className="card">
-              <h3>Kommentare</h3>
-              {selectedText && <p className="muted">Inline-Kommentar auf: "{selectedText}"</p>}
-              <form onSubmit={addComment} className="create-form">
-                <textarea
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder="Kommentar schreiben... nutze @username für Mentions"
-                  required
-                />
-                {mentions.length > 0 && (
-                  <div className="mention-box">
-                    {mentions.map((m) => (
-                      <button type="button" key={m} className="ghost" onClick={() => applyMention(m)}>@{m}</button>
-                    ))}
+            {selectedPage && (
+              <section className="card">
+                <h3>Kommentare</h3>
+                {selectedText && <p className="muted">Inline-Kommentar auf: "{selectedText}"</p>}
+                {replyTarget && <p className="muted">Antwort auf Kommentar: {replyTarget}</p>}
+                <form onSubmit={addComment} className="create-form">
+                  <textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Kommentar schreiben..." required />
+                  {mentions.length > 0 && (
+                    <div className="mention-box">
+                      {mentions.map((m) => <button type="button" className="ghost" key={m} onClick={() => applyMention(m)}>@{m}</button>)}
+                    </div>
+                  )}
+                  <div className="modal-actions">
+                    <button type="submit">Kommentar senden</button>
                   </div>
-                )}
-                <div className="modal-actions">
-                  <button type="submit">Kommentar senden</button>
-                </div>
-              </form>
+                </form>
 
-              <ul className="comments-list">
-                {pageComments.map((c) => (
-                  <li key={c.id}>
-                    <strong>@{c.author}</strong> <small>{new Date(c.createdAt).toLocaleString()}</small>
-                    {c.selectedText && <blockquote>{c.selectedText}</blockquote>}
-                    <p>{c.text}</p>
-                    <button className="ghost" onClick={() => setReplyTarget(c.id)}>Antworten</button>
-                    <ul>
-                      {comments.filter((x) => x.parentId === c.id).map((reply) => (
-                        <li key={reply.id}><strong>@{reply.author}</strong> {reply.text}</li>
-                      ))}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
-            </section>
+                <ul className="comments-list">
+                  {pageComments.map((c) => (
+                    <li key={c.id}>
+                      <strong>@{c.author}</strong> <small>{new Date(c.createdAt).toLocaleString()}</small>
+                      {c.selectedText && <blockquote>{c.selectedText}</blockquote>}
+                      <p>{c.text}</p>
+                      <button className="ghost" onClick={() => setReplyTarget(c.id)}>Antworten</button>
+                      <ul>
+                        {comments.filter((x) => x.parentId === c.id).map((reply) => (
+                          <li key={reply.id}><strong>@{reply.author}</strong> {reply.text}</li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </>
         )}
       </main>
@@ -681,23 +741,21 @@ export function HomePage({ token }: { token: string }) {
       {showRightSidebar && (
         <aside className="hwiki-rightbar">
           <section>
-            <h4>Page Info</h4>
-            <p>Role: {role}</p>
-            <p>Space: {selectedSpace.name}</p>
-            <p>Updated: {selectedPage ? new Date(selectedPage.updatedAt).toLocaleString() : "-"}</p>
+            <h4>Table of Contents</h4>
+            <ul>{toc.length ? toc.map((h, i) => <li key={`${h.text}-${i}`} className={`toc-l${h.level}`}>{h.text}</li>) : <li>Keine Überschriften</li>}</ul>
           </section>
           <section>
-            <h4>Table of Contents</h4>
-            <ul>
-              {toc.length ? toc.map((h, idx) => <li key={`${h.text}-${idx}`} className={`toc-l${h.level}`}>{h.text}</li>) : <li>Keine Überschriften</li>}
-            </ul>
+            <h4>Page Info</h4>
+            <p>Space: {selectedSpace.name}</p>
+            <p>Role: {role}</p>
+            <p>Last update: {selectedPage ? new Date(selectedPage.updatedAt).toLocaleString() : "-"}</p>
           </section>
           <section>
             <h4>Attachments</h4>
-            <p>Bild-URLs aus dem Editor werden inline angezeigt.</p>
+            <p>Bilder aus dem Editor werden direkt in der Seite angezeigt.</p>
           </section>
           <section>
-            <h4>Page Properties</h4>
+            <h4>Properties</h4>
             <p>Favorit: {selectedPage && favorites[selectedPage.id] ? "Ja" : "Nein"}</p>
             <p>Watching: {selectedPage && watching[selectedPage.id] ? "Ja" : "Nein"}</p>
           </section>
@@ -724,7 +782,7 @@ export function HomePage({ token }: { token: string }) {
             </ul>
             {diffVersion && (
               <div className="diff-view">
-                <h4>Diff (Vorher/Nachher)</h4>
+                <h4>Diff</h4>
                 <div className="diff-grid">
                   <pre>{stripHtml(diffVersion.content)}</pre>
                   <pre>{stripHtml(selectedPage.content)}</pre>

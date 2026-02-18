@@ -637,3 +637,23 @@ button.icon {
     grid-template-columns: 1fr;
   }
 }
+
+.hwiki-shell.sidebar-collapsed {
+  grid-template-columns: minmax(0, 1fr) 290px;
+}
+
+.hwiki-shell.rightbar-hidden {
+  grid-template-columns: 280px minmax(0, 1fr);
+}
+
+.hwiki-shell.sidebar-collapsed.rightbar-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.hwiki-shell.sidebar-collapsed .hwiki-main {
+  grid-column: 1 / 2;
+}
+
+.hwiki-shell.sidebar-collapsed .hwiki-rightbar {
+  grid-column: 2 / 3;
+}

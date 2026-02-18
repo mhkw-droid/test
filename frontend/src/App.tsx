@@ -96,12 +96,7 @@ export default function App() {
           </article>
         </section>
       ) : (
-        <>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-            <button onClick={logout}>Logout</button>
-          </div>
-          <HomePage token={token} />
-        </>
+        <HomePage token={token} onLogout={logout} />
       )}
     </main>
   );
